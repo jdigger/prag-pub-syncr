@@ -1,0 +1,91 @@
+buildscript {
+    repositories {
+        mavenRepo name: 'Clojars', url: 'http://clojars.org/repo'
+    }
+    dependencies {
+        classpath "clojuresque:clojuresque:${clojuresque_version}"
+    }
+}
+
+repositories {
+    mavenCentral()
+    mavenRepo name: 'Clojars', url: 'http://clojars.org/repo'
+}
+
+apply plugin: 'clojure'
+
+dependencies {
+    compile "org.clojure:clojure:${clojure_version}"
+
+    // for testing, but easier IDEA support if this is "compile"
+    compile "expectations:expectations:${clojure_test_expectations_version}"
+}
+
+warnOnReflection = true
+aotCompile = true
+
+
+afterEvaluate {
+    task sourcesJar(type: Jar, dependsOn: classes) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    artifacts {
+        archives sourcesJar
+    }
+}
+
+javadoc {
+    title = "${project.name} ${version} API"
+    //options.overview = "src/main/java/overview.html"
+}
+
+
+// **************************************************************************
+//
+// INTELLIJ IDEA CONFIGURATION
+//
+// **************************************************************************
+
+apply plugin: 'idea'
+
+
+idea.module {
+    excludeDirs += file('.gradle-wrapper')
+}
+
+
+idea.project {
+    wildcards += ['?*.gradle']
+    jdkName = '1.6'
+    ipr.withXml {xp ->
+        Node root = xp.asNode()
+        root.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'Git'
+
+        def codeStyleSettingsManager = root.find {it.component.@name == 'CodeStyleSettingsManager' }
+        if (!codeStyleSettingsManager) {
+            NodeBuilder builder = NodeBuilder.newInstance()
+            builder.current = root
+
+            builder.component(name: 'CodeStyleSettingsManager') {
+                option(name: 'USE_PER_PROJECT_SETTINGS', value: 'true')
+                option(name: 'PER_PROJECT_SETTINGS') {
+                    value() {
+                        ['groovy', 'java', 'scala', 'sql', 'closure', 'xml', 'js', 'jsp', 'php', 'yml'].each {lang ->
+                            ADDITIONAL_INDENT_OPTIONS(fileType: lang) {
+                                option(name: 'INDENT_SIZE', value: '4')
+                                option(name: 'CONTINUATION_INDENT_SIZE', value: '8')
+                                option(name: 'TAB_SIZE', value: '4')
+                                option(name: 'USE_TAB_CHARACTER', value: 'false')
+                                option(name: 'SMART_TABS', value: 'false')
+                                option(name: 'LABEL_INDENT_SIZE', value: '0')
+                                option(name: 'LABEL_INDENT_ABSOLUTE', value: 'false')
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
